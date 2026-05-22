@@ -3,9 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>専修大学周辺お出かけアシスタント</title>
+
+<title>専修大学スマートライフダッシュボード</title>
+
+<link rel="icon" href="https://www.senshu-u.ac.jp/favicon.ico">
 
 <style>
+
 body{
     margin:0;
     font-family:sans-serif;
@@ -47,9 +51,15 @@ button{
 }
 
 .bike{
-    font-size:22px;
-    margin-top:10px;
+    font-size:20px;
     font-weight:bold;
+    margin-top:10px;
+}
+
+.uni{
+    font-size:22px;
+    font-weight:bold;
+    margin-top:10px;
 }
 
 .grid{
@@ -68,7 +78,7 @@ button{
 .ok{color:green;font-weight:bold;}
 .warn{color:red;font-weight:bold;}
 
-/* ダークモード */
+/* ダーク */
 .dark{
     background:#111;
     color:white;
@@ -80,6 +90,7 @@ button{
 .dark .weather{
     background:#333;
 }
+
 </style>
 </head>
 
@@ -87,48 +98,33 @@ button{
 
 <div class="container">
 
-<h1>🚆 専修大学周辺お出かけアシスタント</h1>
+<h1>🎓 専修大学スマートライフダッシュボード</h1>
 
-<button onclick="toggleDark()">🌓 ダークモード</button>
+<button onclick="toggleDark()">🌓 ダーク</button>
 <button onclick="refresh()">🔄 更新</button>
 <button onclick="getLocation()">📍 現在地</button>
-<button onclick="openJR()">🚆 JR</button>
-<button onclick="openKeikyu()">🚆 京急</button>
 
-<div id="location">📍 現在地未取得</div>
+<div id="location">📍 未取得</div>
 
 <div class="weather">
-    <h2>🌤 川崎の天気</h2>
-    <div id="weather">読み込み中...</div>
-    <div id="bike">🚴 判定中...</div>
+
+<h2>🌤 川崎の天気</h2>
+
+<div id="weather">読み込み中...</div>
+
+<div id="bike">🚴 判定中...</div>
+
+<div id="uni">🎓 大学判定中...</div>
+
 </div>
 
 <div class="grid">
 
-<div class="card">
-<h3>JR東日本</h3>
-<p class="ok">平常運転</p>
-</div>
-
-<div class="card">
-<h3>京急</h3>
-<p class="ok">平常運転</p>
-</div>
-
-<div class="card">
-<h3>東急</h3>
-<p class="warn">一部遅延</p>
-</div>
-
-<div class="card">
-<h3>小田急</h3>
-<p class="ok">平常運転</p>
-</div>
-
-<div class="card">
-<h3>京王</h3>
-<p class="ok">平常運転</p>
-</div>
+<div class="card"><b>JR東日本</b><p class="ok">平常運転</p></div>
+<div class="card"><b>京急</b><p class="ok">平常運転</p></div>
+<div class="card"><b>東急</b><p class="warn">一部遅延</p></div>
+<div class="card"><b>小田急</b><p class="ok">平常運転</p></div>
+<div class="card"><b>京王</b><p class="ok">平常運転</p></div>
 
 </div>
 
@@ -139,7 +135,6 @@ button{
 const lat = 35.5313;
 const lon = 139.6969;
 
-// 天気取得
 function fetchWeather(){
 
 fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Asia%2FTokyo`)
@@ -148,35 +143,59 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&c
 
 let w = data.current_weather;
 
+// 天気
 document.getElementById("weather").innerHTML =
 `<div class="temp">${w.temperature}°C</div>
 <p>風速: ${w.windspeed} km/h</p>`;
 
-let msg="";
+// 自転車判定
+let bike="";
 
 if(w.weathercode>=61){
-msg="🚫 雨で自転車NG";
+bike="🚫 雨でNG";
 }
 else if(w.windspeed>25){
-msg="💨 風が強い";
+bike="💨 風強い";
 }
 else if(w.temperature>33){
-msg="🥵 暑すぎ注意";
+bike="🥵 暑い";
 }
 else{
-msg="🚴 自転車OK";
+bike="🚴 OK";
 }
 
-document.getElementById("bike").innerHTML = msg;
+document.getElementById("bike").innerHTML = bike;
+
+// 🎓 大学判定
+let score=0;
+
+if(w.weathercode>=61) score-=2;
+if(w.windspeed>25) score-=2;
+if(w.temperature>33) score-=1;
+if(w.temperature<5) score-=1;
+
+let uni="";
+
+if(score>=1){
+uni="🎓 行くべき（快適）";
+}
+else if(score===0){
+uni="⚠ 迷う";
+}
+else{
+uni="🚫 行かない方がいい";
+}
+
+document.getElementById("uni").innerHTML = uni;
 
 });
+
 }
 
-// 自動更新
 setInterval(fetchWeather,60000);
 fetchWeather();
 
-// ダークモード
+// ダーク
 function toggleDark(){
 document.body.classList.toggle("dark");
 }
@@ -192,15 +211,6 @@ navigator.geolocation.getCurrentPosition(pos=>{
 document.getElementById("location").innerHTML =
 `📍 ${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)}`;
 });
-}
-
-// リンク
-function openJR(){
-window.open("https://traininfo.jreast.co.jp/");
-}
-
-function openKeikyu(){
-window.open("https://unkou.keikyu.co.jp/");
 }
 
 </script>
