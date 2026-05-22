@@ -34,7 +34,7 @@ h1{
     border-radius:20px;
 }
 
-/* AI判定 */
+/* AI結果 */
 .ai-box{
     margin-top:15px;
     padding:20px;
@@ -55,10 +55,18 @@ h1{
     box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
-/* 出席率 */
-.attendance{
-    font-size:18px;
+/* バッジ */
+.badge{
+    display:inline-block;
+    padding:5px 10px;
+    border-radius:10px;
+    font-size:14px;
+    margin:3px;
 }
+
+.green{background:#e8f5e9;color:#2e7d32;}
+.yellow{background:#fff8e1;color:#f9a825;}
+.red{background:#ffebee;color:#c62828;}
 
 </style>
 </head>
@@ -67,12 +75,12 @@ h1{
 
 <div class="container">
 
-<h1>🎓 専修大学AI通学判定機</h1>
+<h1>🎓 専修大学AI通学ダッシュボード</h1>
 
 <!-- 天気 -->
 <div class="weather">
 
-<h2>🌤 川崎の天気</h2>
+<h2>🌤 川崎リアルタイム情報</h2>
 
 <div id="weather">読み込み中...</div>
 
@@ -83,10 +91,16 @@ h1{
 🤖 判定中...
 </div>
 
+<!-- 交通状況 -->
+<div class="card">
+<h2>🚆 鉄道・自転車リスク</h2>
+<div id="transport"></div>
+</div>
+
 <!-- 出席率 -->
 <div class="card">
 <h2>📊 出席率・単位リスク</h2>
-<div id="attendance">計算中...</div>
+<div id="attendance"></div>
 </div>
 
 </div>
@@ -96,8 +110,32 @@ h1{
 const lat = 35.5313;
 const lon = 139.6969;
 
-/* 出席率（仮） */
+/* 出席率 */
 let attendanceRate = 78;
+
+/* 仮：鉄道遅延 */
+function trainRisk(){
+
+// ランダム（後でAPI化可能）
+let jrDelay = Math.random() < 0.2;
+let tokyuDelay = Math.random() < 0.3;
+
+return {
+jr: jrDelay,
+tokyu: tokyuDelay
+};
+}
+
+/* 自転車判定 */
+function bikeRisk(w){
+
+if(w.weathercode >= 61) return "red";
+if(w.windspeed > 25) return "red";
+if(w.temperature > 33) return "yellow";
+if(w.temperature < 5) return "yellow";
+
+return "green";
+}
 
 /* 天気取得 */
 function fetchWeather(){
@@ -112,80 +150,84 @@ let w = data.current_weather;
 document.getElementById("weather").innerHTML =
 `<b>${w.temperature}°C</b> / 風 ${w.windspeed} km/h`;
 
+/* 🚆鉄道リスク */
+let t = trainRisk();
+
+/* バッジ表示 */
+document.getElementById("transport").innerHTML =
+`
+<span class="badge ${t.jr ? 'red':'green'}">JR ${t.jr ? '遅延' : '正常'}</span>
+<span class="badge ${t.tokyu ? 'red':'green'}">東急 ${t.tokyu ? '遅延' : '正常'}</span>
+`;
+
+/* 🚴自転車 */
+let bike = bikeRisk(w);
+
 /* スコア */
 let score = 0;
 let reason = [];
 
-/* 天気 */
-if(w.weathercode>=61){
+if(w.weathercode >= 61){
 score -= 2;
-reason.push("雨で移動が面倒");
+reason.push("雨");
 }
-if(w.windspeed>25){
+if(w.windspeed > 25){
 score -= 2;
-reason.push("風が強い");
+reason.push("強風");
 }
-if(w.temperature>33){
+if(w.temperature > 33){
 score -= 1;
-reason.push("暑すぎる");
+reason.push("猛暑");
 }
-if(w.temperature<5){
-score -= 1;
-reason.push("寒すぎる");
+
+/* 鉄道 */
+if(t.jr || t.tokyu){
+score -= 2;
+reason.push("電車遅延");
 }
 
 /* 出席率 */
 if(attendanceRate < 80){
 score -= 2;
-reason.push("出席率が低い");
+reason.push("出席率低い");
 }
 
 /* 判定 */
-let result="";
-let cls="";
+let result="", cls="";
 
 if(score >= 3){
-result = "🎓 行くべき";
-cls = "good";
+result="🎓 行くべき";
+cls="good";
 }
 else if(score >= 0){
-result = "👍 迷う";
-cls = "mid";
+result="👍 迷う";
+cls="mid";
 }
 else{
-result = "🚫 休んでもOK";
-cls = "bad";
+result="🚫 休むべき";
+cls="bad";
 }
 
-/* 表示 */
-document.getElementById("ai").className = "ai-box " + cls;
+/* AI結果 */
+document.getElementById("ai").className="ai-box "+cls;
 
-document.getElementById("ai").innerHTML =
+document.getElementById("ai").innerHTML=
 `<h2>${result}</h2>
-<p>理由:</p>
+<p>理由：</p>
 <ul>${reason.map(r=>`<li>${r}</li>`).join("")}</ul>`;
 
 /* 出席率 */
-let risk="";
+let risk =
+attendanceRate>=85?"安全":
+attendanceRate>=75?"注意":"単位危険⚠";
 
-if(attendanceRate >= 85){
-risk="安全";
-}
-else if(attendanceRate >= 75){
-risk="注意";
-}
-else{
-risk="単位危険⚠";
-}
-
-document.getElementById("attendance").innerHTML =
+document.getElementById("attendance").innerHTML=
 `出席率: ${attendanceRate}%<br>判定: ${risk}`;
 
 });
 
 }
 
-/* 起動 */
 fetchWeather();
 
 </script>
