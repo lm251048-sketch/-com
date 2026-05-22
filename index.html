@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>専修大学通学判定COM</title>
+<title>専修大学AI通学ダッシュボード</title>
 
 <link rel="icon" href="https://www.senshu-u.ac.jp/favicon.ico">
 
@@ -14,7 +14,6 @@ body{
     margin:0;
     font-family:sans-serif;
     background:#eef3f8;
-    transition:0.3s;
 }
 
 .container{
@@ -27,98 +26,38 @@ h1{
     text-align:center;
 }
 
-/* ボタン */
-button{
-    margin:5px;
-    padding:10px 14px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    background:#1976d2;
-    color:white;
-}
-
 /* 天気 */
 .weather{
     background:linear-gradient(135deg,#4facfe,#00c6ff);
     color:white;
     padding:25px;
     border-radius:20px;
-    margin-bottom:20px;
 }
 
-.temp{
-    font-size:55px;
-    font-weight:bold;
-}
-
-/* 自転車 */
-.bike{
-    font-size:20px;
-    font-weight:bold;
-    margin-top:10px;
-}
-
-/* ⭐ 超重要：大学判定 */
-.uni-box{
+/* AI判定 */
+.ai-box{
     margin-top:15px;
     padding:20px;
     border-radius:15px;
-    background:rgba(0,0,0,0.2);
+    color:white;
 }
 
-.uni-title{
-    font-size:18px;
-    opacity:0.9;
-}
+.good{background:#00c853;}
+.mid{background:#ffb300;}
+.bad{background:#d50000;}
 
-.uni-result{
-    font-size:38px;
-    font-weight:900;
-    margin-top:5px;
-}
-
-/* 色分け */
-.good{
-    color:#00ff95;
-}
-
-.mid{
-    color:#ffe066;
-}
-
-.bad{
-    color:#ff4d4d;
-}
-
-/* グリッド */
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:15px;
-}
-
+/* カード */
 .card{
     background:white;
-    padding:15px;
+    padding:20px;
     border-radius:15px;
+    margin-top:15px;
     box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
-.ok{color:green;font-weight:bold;}
-.warn{color:red;font-weight:bold;}
-
-/* ダーク */
-.dark{
-    background:#111;
-    color:white;
-}
-.dark .card{
-    background:#222;
-    color:white;
-}
-.dark .weather{
-    background:#333;
+/* 出席率 */
+.attendance{
+    font-size:18px;
 }
 
 </style>
@@ -128,41 +67,26 @@ button{
 
 <div class="container">
 
-<h1>🎓 専修大学通学判定COM</h1>
+<h1>🎓 専修大学AI通学ダッシュボード</h1>
 
-<button onclick="toggleDark()">🌓 ダーク</button>
-<button onclick="refresh()">🔄 更新</button>
-<button onclick="getLocation()">📍 現在地</button>
-
-<div id="location">📍 未取得</div>
-
+<!-- 天気 -->
 <div class="weather">
 
 <h2>🌤 川崎の天気</h2>
 
 <div id="weather">読み込み中...</div>
 
-<div id="bike">🚴 判定中...</div>
-
-<!-- ⭐ 超強調エリア -->
-<div class="uni-box">
-
-<div class="uni-title">🎓 専修大学に行くべきか</div>
-
-<div id="uni" class="uni-result">判定中...</div>
-
 </div>
 
+<!-- AI判定 -->
+<div id="ai" class="ai-box mid">
+🤖 判定中...
 </div>
 
-<div class="grid">
-
-<div class="card"><b>JR東日本</b><p class="ok">平常運転</p></div>
-<div class="card"><b>京急</b><p class="ok">平常運転</p></div>
-<div class="card"><b>東急</b><p class="warn">一部遅延</p></div>
-<div class="card"><b>小田急</b><p class="ok">平常運転</p></div>
-<div class="card"><b>京王</b><p class="ok">平常運転</p></div>
-
+<!-- 出席率 -->
+<div class="card">
+<h2>📊 出席率・単位リスク</h2>
+<div id="attendance">計算中...</div>
 </div>
 
 </div>
@@ -172,6 +96,10 @@ button{
 const lat = 35.5313;
 const lon = 139.6969;
 
+/* 出席率（仮） */
+let attendanceRate = 78;
+
+/* 天気取得 */
 function fetchWeather(){
 
 fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Asia%2FTokyo`)
@@ -180,80 +108,85 @@ fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&c
 
 let w = data.current_weather;
 
-// 天気
+/* 表示 */
 document.getElementById("weather").innerHTML =
-`<div class="temp">${w.temperature}°C</div>
-<p>風速: ${w.windspeed} km/h</p>`;
+`<b>${w.temperature}°C</b> / 風 ${w.windspeed} km/h`;
 
-// 自転車
-let bike="";
+/* スコア */
+let score = 0;
+let reason = [];
 
+/* 天気 */
 if(w.weathercode>=61){
-bike="🚫 雨でNG";
+score -= 2;
+reason.push("雨で移動が面倒");
 }
-else if(w.windspeed>25){
-bike="💨 風強い";
+if(w.windspeed>25){
+score -= 2;
+reason.push("風が強い");
 }
-else if(w.temperature>33){
-bike="🥵 暑い";
+if(w.temperature>33){
+score -= 1;
+reason.push("暑すぎる");
 }
-else{
-bike="🚴 OK";
+if(w.temperature<5){
+score -= 1;
+reason.push("寒すぎる");
 }
 
-document.getElementById("bike").innerHTML = bike;
+/* 出席率 */
+if(attendanceRate < 80){
+score -= 2;
+reason.push("出席率が低い");
+}
 
-// 🎓 通学判定（強化）
-let score=0;
-
-if(w.weathercode>=61) score-=2;
-if(w.windspeed>25) score-=2;
-if(w.temperature>33) score-=1;
-if(w.temperature<5) score-=1;
-
-let text="";
+/* 判定 */
+let result="";
 let cls="";
 
-if(score>=2){
-text="行くべき（最高コンディション）";
-cls="good";
+if(score >= 3){
+result = "🎓 行くべき";
+cls = "good";
 }
-else if(score===1 || score===0){
-text="迷う（様子見）";
-cls="mid";
+else if(score >= 0){
+result = "👍 迷う";
+cls = "mid";
 }
 else{
-text="行かない方がいい";
-cls="bad";
+result = "🚫 休んでもOK";
+cls = "bad";
 }
 
-document.getElementById("uni").className = "uni-result " + cls;
-document.getElementById("uni").innerHTML = text;
+/* 表示 */
+document.getElementById("ai").className = "ai-box " + cls;
+
+document.getElementById("ai").innerHTML =
+`<h2>${result}</h2>
+<p>理由:</p>
+<ul>${reason.map(r=>`<li>${r}</li>`).join("")}</ul>`;
+
+/* 出席率 */
+let risk="";
+
+if(attendanceRate >= 85){
+risk="安全";
+}
+else if(attendanceRate >= 75){
+risk="注意";
+}
+else{
+risk="単位危険⚠";
+}
+
+document.getElementById("attendance").innerHTML =
+`出席率: ${attendanceRate}%<br>判定: ${risk}`;
 
 });
 
 }
 
-setInterval(fetchWeather,60000);
+/* 起動 */
 fetchWeather();
-
-// ダーク
-function toggleDark(){
-document.body.classList.toggle("dark");
-}
-
-// 更新
-function refresh(){
-fetchWeather();
-}
-
-// 現在地
-function getLocation(){
-navigator.geolocation.getCurrentPosition(pos=>{
-document.getElementById("location").innerHTML =
-`📍 ${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)}`;
-});
-}
 
 </script>
 
