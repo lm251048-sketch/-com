@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>専修大学スマートライフダッシュボード</title>
+<title>専修大学通学判定COM</title>
 
 <link rel="icon" href="https://www.senshu-u.ac.jp/favicon.ico">
 
@@ -27,6 +27,7 @@ h1{
     text-align:center;
 }
 
+/* ボタン */
 button{
     margin:5px;
     padding:10px 14px;
@@ -37,6 +38,7 @@ button{
     color:white;
 }
 
+/* 天気 */
 .weather{
     background:linear-gradient(135deg,#4facfe,#00c6ff);
     color:white;
@@ -50,18 +52,46 @@ button{
     font-weight:bold;
 }
 
+/* 自転車 */
 .bike{
     font-size:20px;
     font-weight:bold;
     margin-top:10px;
 }
 
-.uni{
-    font-size:22px;
-    font-weight:bold;
-    margin-top:10px;
+/* ⭐ 超重要：大学判定 */
+.uni-box{
+    margin-top:15px;
+    padding:20px;
+    border-radius:15px;
+    background:rgba(0,0,0,0.2);
 }
 
+.uni-title{
+    font-size:18px;
+    opacity:0.9;
+}
+
+.uni-result{
+    font-size:38px;
+    font-weight:900;
+    margin-top:5px;
+}
+
+/* 色分け */
+.good{
+    color:#00ff95;
+}
+
+.mid{
+    color:#ffe066;
+}
+
+.bad{
+    color:#ff4d4d;
+}
+
+/* グリッド */
 .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
@@ -98,7 +128,7 @@ button{
 
 <div class="container">
 
-<h1>🎓 専修大学スマートライフダッシュボード</h1>
+<h1>🎓 専修大学通学判定COM</h1>
 
 <button onclick="toggleDark()">🌓 ダーク</button>
 <button onclick="refresh()">🔄 更新</button>
@@ -114,7 +144,14 @@ button{
 
 <div id="bike">🚴 判定中...</div>
 
-<div id="uni">🎓 大学判定中...</div>
+<!-- ⭐ 超強調エリア -->
+<div class="uni-box">
+
+<div class="uni-title">🎓 専修大学に行くべきか</div>
+
+<div id="uni" class="uni-result">判定中...</div>
+
+</div>
 
 </div>
 
@@ -148,7 +185,7 @@ document.getElementById("weather").innerHTML =
 `<div class="temp">${w.temperature}°C</div>
 <p>風速: ${w.windspeed} km/h</p>`;
 
-// 自転車判定
+// 自転車
 let bike="";
 
 if(w.weathercode>=61){
@@ -166,7 +203,7 @@ bike="🚴 OK";
 
 document.getElementById("bike").innerHTML = bike;
 
-// 🎓 大学判定
+// 🎓 通学判定（強化）
 let score=0;
 
 if(w.weathercode>=61) score-=2;
@@ -174,19 +211,24 @@ if(w.windspeed>25) score-=2;
 if(w.temperature>33) score-=1;
 if(w.temperature<5) score-=1;
 
-let uni="";
+let text="";
+let cls="";
 
-if(score>=1){
-uni="🎓 行くべき（快適）";
+if(score>=2){
+text="行くべき（最高コンディション）";
+cls="good";
 }
-else if(score===0){
-uni="⚠ 迷う";
+else if(score===1 || score===0){
+text="迷う（様子見）";
+cls="mid";
 }
 else{
-uni="🚫 行かない方がいい";
+text="行かない方がいい";
+cls="bad";
 }
 
-document.getElementById("uni").innerHTML = uni;
+document.getElementById("uni").className = "uni-result " + cls;
+document.getElementById("uni").innerHTML = text;
 
 });
 
